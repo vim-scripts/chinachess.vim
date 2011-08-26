@@ -1,0 +1,6 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=3711
+
+用来浏览中国象棋棋盘文件
+alt-d  画初始棋盘
+alt-n  下一步棋
+alt-p   上一步棋
