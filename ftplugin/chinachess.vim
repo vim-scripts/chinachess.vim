@@ -1,8 +1,13 @@
+" version 1.1
 syn match red '車\|馬\|砲\|仕\|相\|兵\|帥'
 syn match black '车\|马\|炮\|士\|象\|卒\|将'
+syn match hejie '河\|界'
 set background=light
-highlight black     gui=bold guifg=Black guibg=bg
-highlight red       gui=bold guifg=Red guibg=bg
+highlight black     gui=bold guifg=Black guibg=LightGray
+highlight red       gui=bold guifg=Red guibg=LightGray
+highlight hejie     gui=italic guifg=LightGreen guibg=LightGray
+highlight Normal    gui=None guifg=Black guibg=LightGray
+highlight Cursor        gui=None guibg=cyan3 guifg=White
 
 let s:line = []
 call add(s:line,"  １   ２   ３   ４   ５   ６   ７   ８   ９ ")
@@ -106,14 +111,19 @@ function DrawNext()
     else 
         echo b:chessStep[b:step]
     endif
-    let s:curChess = strpart(b:chessStep[b:step],0,2)
-    let s:curStep =strpart(b:chessStep[b:step],2,2)
+    call MoveChess(b:chessStep[b:step])
+    let b:step +=1
+endfunction
+
+function MoveChess(chessStep)
+    let s:curChess = strpart(a:chessStep,0,2)
+    let s:curStep =strpart(a:chessStep,2,2)
     if stridx(s:line[0],s:curStep) == -1 && stridx(s:line[20],s:curStep) == -1 
         let s:curChess = s:curStep
-        let s:curStep = strpart(b:chessStep[b:step],0,2)
+        let s:curStep = strpart(a:chessStep,0,2)
     endif 
-    let s:action = strpart(b:chessStep[b:step],4,2)
-    let s:nextStep = strpart(b:chessStep[b:step],6,2)
+    let s:action = strpart(a:chessStep,4,2)
+    let s:nextStep = strpart(a:chessStep,6,2)
     if b:step%2 == 0
         if s:curChess == '炮'
             let s:curChess = '砲'
@@ -190,8 +200,8 @@ function DrawNext()
         exe ':substitute/\%'.(s:pos[2]-1).'c.*\%'.(s:pos[2]+3).'c/['.s:curChess.']' 
     endif
     call setpos('.',s:pos)
+    normal h
 
-    let b:step +=1
 endfunction
 
 function s:GetNextPos(chess,action,next)
