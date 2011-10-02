@@ -1,4 +1,8 @@
-" version 1.1
+"             chinachess vim
+"             version 1.2
+"             author  jumping
+"             email www.ping@gmail.com
+
 syn match red '車\|馬\|砲\|仕\|相\|兵\|帥'
 syn match black '车\|马\|炮\|士\|象\|卒\|将'
 syn match hejie '河\|界'
@@ -8,6 +12,77 @@ highlight red       gui=bold guifg=Red guibg=LightGray
 highlight hejie     gui=italic guifg=LightGreen guibg=LightGray
 highlight Normal    gui=None guifg=Black guibg=LightGray
 highlight Cursor        gui=None guibg=cyan3 guifg=White
+
+"ParseChessFile {{{
+function ParseChessFile()
+    normal gg
+    let step = 1
+    let curCol = line(".") 
+    let curLine = getline(".")
+    let rxChessMove = '\(帅\|車\|馬\|砲\|仕\|相\|兵\|帥\|车\|马\|炮\|士\|象\|卒\|将\|１\|２\|３\|４\|５\|６\|７\|８\|９\|九\|八\|七\|六\|五\|四\|三\|二\|一\|平\|进\|退\|前\|后\)\{4\}'  
+    let rxKeyLine = '^\s*\[.*\]'
+    let rxComLine = '^\s*{\|^\s*('
+    let lastLine = line("$")
+    while curCol <= lastLine
+        " result line
+        if curLine =~ '^\s*\d-\d'
+            if curLine =~ "^\s*1-0"
+                let b:result = "红胜"
+            else
+                if curLine =~ "^\s*0-1"
+                    let b:result = "黑胜"
+                else
+                    let b:result = "和局"
+                endif
+            endif
+        endif
+
+        " key line
+        if curLine =~ rxKeyLine
+            normal j
+            let curLine = getline(".")
+            let curCol = line(".")
+            continue
+        endif
+
+        " comment line
+        if curLine =~ rxComLine
+            if curLine =~ '^\s*{'
+                call searchpair('{','','}')
+            else
+                call searchpair('(','',')')
+            endif
+            normal j
+            let curLine = getline(".")
+            let curCol = line(".")
+            continue
+        endif
+
+        " space line
+        if curLine =~ '^\s*$'
+            normal j
+            let curLine = getline(".")
+            let curCol = line(".")
+            continue
+        endif
+
+       let posCol =match(curLine,rxChessMove, 0)  
+       while posCol >= 0
+           call add(b:chessStep, strpart(curLine, posCol, 8))
+           let posCol =match(curLine,rxChessMove,posCol +8)   
+           let step += 1
+       endwhile
+
+       let temp = line(".")
+       normal j
+       let curLine = getline(".")
+       let curCol = line(".")
+       if temp == curCol
+           break
+       endif
+    endwhile        
+endfunction
+"}}}
 
 let s:line = []
 call add(s:line,"  １   ２   ３   ４   ５   ６   ７   ８   ９ ")
@@ -54,44 +129,14 @@ let s:blackChessR = "车"
 let s:blackChessC = "炮" 
 let s:blackChessP = "卒" 
 
-let s:curLine = getline(".")
-let b:step = 0
-while( match( s:curLine, "^[") != -1  )
-    if stridx(s:curLine,"Result") != -1
-        let b:result=matchstr(s:curLine,'\(Result "\)\@<=.*"\@=')
-        if b:result == "1-0"
-            let b:result = "红胜"
-        else
-            if b:result == "0-1"
-                let b:result = "黑胜"
-            else
-                let b:result = "和局"
-            endif
-        endif
-
-    endif
-    normal j
-    let s:curLine= getline(".")
-endwhile
-
-let s:lnum = 1
-let s:col = 1
-let step = 1
 let b:chessStep = []
-while s:lnum!=0 || s:col != 0
-let [s:lnum, s:col] = searchpos('\('.step.'\.\)\@<=\s','n')
-if s:col != 0
-    call add(b:chessStep, strpart(getline(s:lnum),s:col,8))
-    call add(b:chessStep, strpart(getline(s:lnum),s:col+10,8))
-    let step += 1
-endif
-endwhile
+let b:step = 0
+let b:result = "空"
 
-map <silent><A-n>  :call DrawNext()<CR>
-map <silent><A-d>  :call DrawChessboard()<CR>
-map <silent><A-p>  :let b:step -=1<cr>:normal u<cr>
+call ParseChessFile()
 
-"----------------------------------------------------------------
+
+"DrawChessboard {{{
 function DrawChessboard()
     set lines=22
     set columns=45
@@ -101,8 +146,9 @@ function DrawChessboard()
     endfor
     normal ggdd
 endfunction
+"}}}
 
-"--------------------------------------------------------------------------------
+"DrawNext {{{
 function DrawNext()
     normal gg
     if b:step >= len(b:chessStep)
@@ -114,7 +160,9 @@ function DrawNext()
     call MoveChess(b:chessStep[b:step])
     let b:step +=1
 endfunction
+"}}}
 
+"MoveChess {{{
 function MoveChess(chessStep)
     let s:curChess = strpart(a:chessStep,0,2)
     let s:curStep =strpart(a:chessStep,2,2)
@@ -148,8 +196,10 @@ function MoveChess(chessStep)
         return
     endif
 
+
     let [s:lnum1, s:col1] = searchpos(s:curStep,'n')
     if s:lnum1 ==0 && s:col1 ==0
+        " curStep 是 前 或者 后 的棋子定位 
         if s:curStep == s:postionQ && b:step%2 !=0
             call setpos('.',[0,s:lnum,s:col,0])
             let [s:lnum, s:col] = searchpos(s:curChess,'n')
@@ -159,6 +209,19 @@ function MoveChess(chessStep)
             let [s:lnum, s:col] = searchpos(s:curChess,'n')
         endif
         let s:col1 = s:col "找到当前棋子
+    else
+        " 黑棋，第一行，动作是退，则继续找下面的棋子
+        if s:lnum == 2 && b:step%2 != 0 && s:action == s:actionT
+            call setpos('.',[0,s:lnum,s:col,0])
+            let [s:lnum, s:col] = searchpos(s:curChess,'n')
+        endif
+
+        "红棋，第16 行，动作是进，如果是 仕 ，则继续找下面的棋子
+        if s:lnum == 16 && b:step%2 == 0 && s:action == s:actionJ && s:curChess == s:redChessA
+            call setpos('.',[0,s:lnum,s:col,0])
+            let [s:lnum, s:col] = searchpos(s:curChess,'n')
+        endif
+
     endif
     while s:col1 != s:col 
         call setpos('.',[0,s:lnum,s:col,0])
@@ -192,6 +255,8 @@ function MoveChess(chessStep)
     normal gg
     let s:pos = s:GetNextPos(s:curChess,s:action,s:nextStep)
     call setpos('.',s:pos)
+
+    " 画移动后的棋子
     normal h
     if b:step%2 ==0
         let curLine = getline('.')
@@ -203,7 +268,9 @@ function MoveChess(chessStep)
     normal h
 
 endfunction
+"}}}
 
+" GetNextPos {{{
 function s:GetNextPos(chess,action,next)
     let [s:lnum2,s:col2] = searchpos(a:next,'n')
     let ret = [0,s:lnum,s:col,0]
@@ -391,3 +458,11 @@ function s:GetNextPos(chess,action,next)
     endif
     return ret
 endfunction
+"}}}
+
+"key map {{{
+map <silent><A-n>  :call DrawNext()<CR>
+map <silent><A-d>  :call DrawChessboard()<CR>
+map <silent><A-p>  :let b:step -=1<cr>:normal u<cr>
+map <silent><A-q>  :q!<CR>
+"}}}
