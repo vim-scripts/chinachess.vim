@@ -1,10 +1,12 @@
 This is a mirror of http://www.vim.org/scripts/script.php?script_id=3711
 
-用来浏览中国象棋棋谱（.pgn）文件 并且可以推演棋局
-alt-d  画棋盘，初始化棋谱内容 
-alt-n  下一步棋 
-alt-p   上一步棋 
-alt-q    退出 
+用来浏览中国象棋棋谱(.pgn)文件 ,和电脑对战,让电脑和电脑对战 。并且可以推演棋局
+alt-d / <Home> 画棋盘,初始化棋谱内容 
+alt-n  / <PageDown>下一步棋 
+alt-p  / <PageUp> 上一步棋 
+alt-q  / <END>  退出 
+<F2>  电脑走一步红子
+<F4>  电脑走一步黑子
 空格  选中棋子 
 回车  把之前选中的棋子移动到当前位置 
-方向键 移动光标（确保在光标在有效的位置上移动）
+方向键 移动光标(确保在光标在有效的位置上移动)
